@@ -1,25 +1,11 @@
-package jsrpc
+package jsonrpc
 
 import (
-	"pusher"
 	"reflect"
 	"unicode"
 	"utf8"
 	"json"
 )
-
-func parseInterface(v interface{}) (c callback) {
-	c.object = reflect.ValueOf(v)
-	c.methods = make(map[string]reflect.Method)
-	num := c.object.Type().NumMethod()
-	for i := 0; i < num; i++ {
-		method := c.object.Type().Method(i)
-		if isPublicMethod(method) {
-			c.methods[method.Name] = method
-		}
-	}
-	return
-}
 
 // Fuck yeah, UTF8 compatible!
 func isPublicMethod(method reflect.Method) bool {
@@ -27,12 +13,25 @@ func isPublicMethod(method reflect.Method) bool {
 
 }
 
-func jsonify(v interface{}) string {
-	b, e := json.Marshal(v)
-	if e != nil {
-		panic("Marshalling failed: " + e.String())
+func (this *JsonRPC) cacheMethods() {
+	this.methods = make(map[string]reflect.Method)
+	num := this.object.Type().NumMethod()
+	for i := 0; i < num; i++ {
+		method := this.object.Type().Method(i)
+		if isPublicMethod(method) {
+			this.methods[method.Name] = method
+		}
 	}
-	return string(b)
+}
+
+func createUnmarshallingInterface(pointerType reflect.Type) interface{} {
+	if pointerType.Kind() != reflect.Ptr {
+		panic("Parameters have to be pointers")
+	}
+
+	valueType := pointerType.Elem()
+	valuePointer := reflect.New(valueType)
+	return valuePointer.Interface()
 }
 
 func createParameterArray(method reflect.Method) []interface{} {
@@ -47,53 +46,46 @@ func createParameterArray(method reflect.Method) []interface{} {
 	return r
 }
 
-func decodeParams(reflectParams *[]reflect.Value, method reflect.Method, jsonparams string) {
-	v := pusher.New(reflectParams)
+func typeParams(method reflect.Method, raw_params []interface{}) []reflect.Value {
 	params := createParameterArray(method)
 
-	e := json.Unmarshal([]byte(jsonparams), &params)
+	data, e := json.Marshal(raw_params)
 	if e != nil {
 		panic(e)
 	}
 
-	for _, param := range params {
-		v.Push(reflect.ValueOf(param))
-	}
-}
-
-func createUnmarshallingInterface(pointerType reflect.Type) interface{} {
-	ok := pointerType.Kind() == reflect.Ptr
-	if !ok {
-		panic("Parameters have to be pointers")
+	e = json.Unmarshal(data, &params)
+	if e != nil {
+		panic(e)
 	}
 
-	valueType := pointerType.Elem()
-	valuePointer := reflect.New(valueType)
-	return valuePointer.Interface()
+	result := make([]reflect.Value, len(params))
+	for i := range params {
+		result[i] = reflect.ValueOf(params[i])
+	}
+	return result
 }
 
-func executeCall(rcv reflect.Value, method reflect.Method, jsonparams string) []interface{} {
+func executeCall(rcv reflect.Value, method reflect.Method, raw_params []interface{}) []interface{} {
 	params := []reflect.Value{rcv}
-	decodeParams(&params, method, jsonparams)
-	reflectresults := method.Func.Call(params)
-	result := value2Interface(reflectresults)
+	params = append(params, typeParams(method, raw_params)...)
+	reflected_results := method.Func.Call(params)
+	result := value2Interface(reflected_results)
 	return result
 }
 
 func interface2Value(in []interface{}) []reflect.Value {
 	out := make([]reflect.Value, 0)
-	out_v := pusher.New(&out)
 	for _, i := range in {
-		out_v.Push(reflect.ValueOf(i))
+		out = append(out, reflect.ValueOf(i))
 	}
 	return out
 }
 
 func value2Interface(in []reflect.Value) []interface{} {
 	out := make([]interface{}, 0)
-	out_v := pusher.New(&out)
 	for _, i := range in {
-		out_v.Push(i.Interface())
+		out = append(out, i.Interface())
 	}
 	return out
 }
