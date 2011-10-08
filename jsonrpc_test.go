@@ -16,7 +16,7 @@ func TestCall(t *testing.T) {
 	call := &Call {
 		MethodName: "PublicMethod1",
 		Parameters: []interface{} {
-			&a, &b,
+			a, b,
 		},
 	}
 
@@ -42,7 +42,7 @@ func TestEnumerate(t *testing.T) {
 	call := &Call {
 		MethodName: "_enumerate",
 		Parameters: []interface{} {
-			&a, &b,
+			a, b,
 		},
 	}
 
@@ -60,5 +60,24 @@ func TestEnumerate(t *testing.T) {
 	}
 	if r2.Name != "PublicMethod1" {
 		t.Fatalf("_enumerate did not return the right function name: %s", r2.Name)
+	}
+}
+
+func TestMarshalling(t *testing.T) {
+	o := MyInt(0)
+	call := `{
+		"MethodName": "PublicMethod1",
+		"Parameters": [
+			1, 2
+		]
+	}`
+
+	rpc := New(o)
+	r, e := rpc.Execute(call)
+	if e != nil {
+		t.Fatalf("Call does not work: %s", e.String())
+	}
+	if r != "[3]" {
+		t.Fatalf("Call did return the right result: \"%s\"", r)
 	}
 }
