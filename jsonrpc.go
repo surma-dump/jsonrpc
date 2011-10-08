@@ -1,8 +1,10 @@
-// JsonRPC makes it possible to invode
+// JsonRPC makes it possible to invoke
 // public methods of objects with a JSON formatted
 // protocol.
 // A limitation is, that parameters have to be pointer types
-// (or interfaces)
+// (or interfaces).
+// A special function "_enumerate" with no parameters
+// returns a list of callable functions.
 package jsonrpc
 
 import (
@@ -33,19 +35,33 @@ func New(obj interface{}) *JsonRPC {
 	return rpc
 }
 
-func (this *JsonRPC) Execute(marshalled_call string) ([]interface{}, os.Error) {
+// Executes the call described by the passed json string.
+// This is basically unmarshalles the string into a Call struct
+// and calls ExecuteCall() afterwards
+// The return parameters of the called functions are save into the array.
+func (this *JsonRPC) Execute(marshalled_call string) (string, os.Error) {
 	call := &Call{}
 	e := json.Unmarshal([]byte(marshalled_call), call)
 	if e != nil {
-		return nil, e
+		return "", e
 	}
-	return this.ExecuteCall(call)
+	returns, e := this.ExecuteCall(call)
+	if e != nil {
+		return "", e
+	}
+	marshalled_returns, e := json.Marshal(returns)
+	if e != nil {
+		return "", e
+	}
+	return string(marshalled_returns), nil
 }
 
 var (
 	ErrNoSuchMethod = os.NewError("Method does not exist")
 )
 
+// Executes the call described by the given call struct.
+// The return parameters of the called functions are saved into the array.
 func (this *JsonRPC) ExecuteCall(call *Call) ([]interface{}, os.Error) {
 	// Catch the special function "_enumerate" which lists all
 	// available methods
@@ -66,7 +82,7 @@ type Method struct {
 }
 
 func (this *JsonRPC) getMethodsAsInterface() (m []interface{}) {
-	methods := this.getMethods()
+	methods := this.GetMethods()
 	m = make([]interface{}, len(methods))
 	for i := range methods {
 		m[i] = methods[i]
@@ -74,7 +90,8 @@ func (this *JsonRPC) getMethodsAsInterface() (m []interface{}) {
 	return m
 }
 
-func (this *JsonRPC) getMethods() (m []Method) {
+// Returns all available methods
+func (this *JsonRPC) GetMethods() (m []Method) {
 	m = make([]Method, this.object.NumMethod())
 	for i := 0; i < this.object.NumMethod(); i++ {
 		method := this.object.Type().Method(i)
