@@ -11,6 +11,8 @@ import (
 	"reflect"
 	"json"
 	"os"
+	"utf8"
+	"unicode"
 )
 
 // Calls will be umarshalled into this struct.
@@ -98,13 +100,17 @@ func (this *JsonRPC) getMethodsAsInterface() (m []interface{}) {
 // Returns all available methods
 func (this *JsonRPC) GetMethods() (m []Method) {
 	m = make([]Method, this.object.NumMethod())
+	j := 0
 	for i := 0; i < this.object.NumMethod(); i++ {
 		method := this.object.Type().Method(i)
-		// first parameter is the receiver object
-		// which is provided by us, not the remote caller
-		m[i].Name = method.Name
-		m[i].NumParams = this.object.Method(i).Type().NumIn() - 1
-		i++
+		// Is this a public method?
+		if unicode.IsUpper(utf8.NewString(method.Name).At(0)) {
+			m[j].Name = method.Name
+			// first parameter is the receiver object
+			// which is provided by us, not the remote caller
+			m[j].NumParams = this.object.Method(i).Type().NumIn() - 1
+			j++
+		}
 	}
-	return
+	return m[0:j]
 }
