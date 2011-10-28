@@ -1,11 +1,11 @@
-About
-=====
+JsonRPC v1.1
+============
 
 JsonRPC is a package for Go which enables RPCs via a generic JSON formatted protocol.
-JsonRPC is medium-oblivious - it doesn’t matter how you obtain the JSON strings.
+JsonRPC is medium-oblivious - it doesn’t matter how you obtain the JSON strings (uuuhh).
 
 Details
-=======
+-------
 All the public methods of an arbitrary object can be called with a simple
 JSON-protocol which is as follows:
 
@@ -22,7 +22,13 @@ JSON-protocol which is as follows:
 		],
 	}
 
+The return value(s) will be an marshalled into an array.
+
 Pitfalls
-========
-Due to limitations of Go’s reflect package, all method parameters have to be pointer
-types (or interfaces).
+--------
+Due to limitations of Go’s reflect package (or rather the language design), all method
+parameters have to be pointer types (or interfaces).
+
+Credits
+-------
+Alexander Surma <alexander.surma@gmail.com>
