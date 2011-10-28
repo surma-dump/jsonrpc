@@ -58,6 +58,7 @@ func (this *JsonRPC) Execute(marshalled_call string) (string, os.Error) {
 
 var (
 	ErrNoSuchMethod = os.NewError("Method does not exist")
+	ErrNumArguments = os.NewError("Wrong number of arguments")
 )
 
 // Executes the call described by the given call struct.
@@ -72,6 +73,10 @@ func (this *JsonRPC) ExecuteCall(call *Call) ([]interface{}, os.Error) {
 	method, ok := this.methods[call.MethodName]
 	if !ok {
 		return nil, ErrNoSuchMethod
+	}
+
+	if method.Type.NumIn() - 1 != len(call.Parameters) {
+		return nil, ErrNumArguments
 	}
 	return executeCall(this.object, method, call.Parameters), nil
 }

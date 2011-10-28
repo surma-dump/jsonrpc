@@ -37,6 +37,22 @@ func TestCall(t *testing.T) {
 	}
 }
 
+func TestWrongCall(t *testing.T) {
+	a, o := 4, MyInt(0)
+	call := &Call {
+		MethodName: "PublicMethod1",
+		Parameters: []interface{} {
+			a,
+		},
+	}
+
+	rpc := New(o)
+	_, e := rpc.ExecuteCall(call)
+	if e != ErrNumArguments {
+		t.Fatalf("Call does not work: %s", e.String())
+	}
+}
+
 func TestEnumerate(t *testing.T) {
 	a, b, o := 4, 5, MyInt(0)
 	call := &Call {
