@@ -8,11 +8,12 @@
 package jsonrpc
 
 import (
+	"encoding/json"
+	"errors"
 	"reflect"
-	"json"
-	"os"
-	"utf8"
+
 	"unicode"
+	"unicode/utf8"
 )
 
 // Calls will be umarshalled into this struct.
@@ -41,7 +42,7 @@ func New(obj interface{}) *JsonRPC {
 // This is basically unmarshalles the string into a Call struct
 // and calls ExecuteCall() afterwards
 // The return parameters of the called functions are save into the array.
-func (this *JsonRPC) Execute(marshalled_call string) (string, os.Error) {
+func (this *JsonRPC) Execute(marshalled_call string) (string, error) {
 	call := &Call{}
 	e := json.Unmarshal([]byte(marshalled_call), call)
 	if e != nil {
@@ -59,13 +60,13 @@ func (this *JsonRPC) Execute(marshalled_call string) (string, os.Error) {
 }
 
 var (
-	ErrNoSuchMethod = os.NewError("Method does not exist")
-	ErrNumArguments = os.NewError("Wrong number of arguments")
+	ErrNoSuchMethod = errors.New("Method does not exist")
+	ErrNumArguments = errors.New("Wrong number of arguments")
 )
 
 // Executes the call described by the given call struct.
 // The return parameters of the called functions are saved into the array.
-func (this *JsonRPC) ExecuteCall(call *Call) ([]interface{}, os.Error) {
+func (this *JsonRPC) ExecuteCall(call *Call) ([]interface{}, error) {
 	// Catch the special function "_enumerate" which lists all
 	// available methods
 	if call.MethodName == "_enumerate" {
@@ -77,7 +78,7 @@ func (this *JsonRPC) ExecuteCall(call *Call) ([]interface{}, os.Error) {
 		return nil, ErrNoSuchMethod
 	}
 
-	if method.Type.NumIn() - 1 != len(call.Parameters) {
+	if method.Type.NumIn()-1 != len(call.Parameters) {
 		return nil, ErrNumArguments
 	}
 	return executeCall(this.object, method, call.Parameters), nil

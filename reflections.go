@@ -3,8 +3,8 @@ package jsonrpc
 import (
 	"reflect"
 	"unicode"
-	"utf8"
-	"json"
+	"unicode/utf8"
+	"encoding/json"
 )
 
 // Fuck yeah, UTF8 compatible!
